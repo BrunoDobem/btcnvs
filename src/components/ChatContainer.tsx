@@ -4,6 +4,7 @@ import { getOrCreateConversationId } from '../lib/storage';
 import { sendMessageToWebhook } from '../lib/chatApi';
 import { rateLimiter, getRateLimitErrorMessage } from '../lib/rateLimiter';
 import { validateMessage } from '../lib/validation';
+import { extractChartDataFromText, cleanOutputFromCode } from '../lib/chartUtils';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 
@@ -110,12 +111,26 @@ export function ChatContainer() {
         history,
       });
 
+      // Se não há chartData na resposta mas o usuário pediu um gráfico,
+      // tentar extrair dados do texto automaticamente
+      let chartData = response.chartData;
+      let cleanedOutput = response.output;
+      
+      if (!chartData) {
+        chartData = extractChartDataFromText(response.output, content) || undefined;
+        // Se um gráfico foi gerado automaticamente, limpar o código do output
+        if (chartData) {
+          cleanedOutput = cleanOutputFromCode(response.output);
+        }
+      }
+
       // Criar mensagem do bot
       const botMessage: ChatMessage = {
         id: generateUUID(),
         role: 'bot',
-        content: response.output,
+        content: cleanedOutput,
         createdAt: new Date().toISOString(),
+        chartData,
       };
 
       // Adicionar resposta do bot

@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../lib/types';
+import { ChartRenderer } from './ChartRenderer';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -7,7 +8,20 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
-  // React escapa automaticamente o conteúdo, prevenindo XSS
+  // Converter \n em quebras de linha reais
+  const formatContent = (content: string) => {
+    return content.split('\n').map((line, index, array) => (
+      <span key={index}>
+        {line}
+        {index < array.length - 1 && <br />}
+      </span>
+    ));
+  };
+
+  // Debug em desenvolvimento
+  if (import.meta.env.DEV && message.chartData) {
+    console.log('Rendering chart in MessageBubble:', message.chartData);
+  }
 
   return (
     <div
@@ -20,9 +34,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             : 'bg-gray-200 text-gray-800'
         }`}
       >
-        <p className="text-sm whitespace-pre-wrap break-words">
-          {message.content}
-        </p>
+        {message.content && (
+          <p className="text-sm break-words">
+            {formatContent(message.content)}
+          </p>
+        )}
+        {message.chartData && (
+          <ChartRenderer chartData={message.chartData} />
+        )}
       </div>
     </div>
   );

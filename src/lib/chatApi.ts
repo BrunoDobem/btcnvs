@@ -1,5 +1,6 @@
-import type { WebhookRequest, WebhookResponse, WebhookRawResponse } from './types';
+import type { WebhookRequest, WebhookResponse, WebhookRawResponse, ChartData } from './types';
 import { isValidUrl, SECURITY_LIMITS, validateHistory, validateMessage, validateConversationId, sanitizeString } from './validation';
+import { extractChartData } from './chartUtils';
 
 // Validar e obter URL do webhook
 function getWebhookUrl(): string {
@@ -99,8 +100,27 @@ export async function sendMessageToWebhook(
     // Sanitizar resposta antes de retornar (proteção XSS)
     const sanitizedOutput = sanitizeString(firstItem.output);
 
+    // Tentar extrair dados de gráfico do output ou usar chartData direto
+    let chartData: ChartData | undefined = firstItem.chartData;
+    if (!chartData) {
+      chartData = extractChartData(sanitizedOutput) || undefined;
+    }
+
+    // Debug em desenvolvimento
+    if (import.meta.env.DEV) {
+      console.log('Webhook response:', { 
+        hasChartData: !!firstItem.chartData, 
+        extractedChartData: !!chartData,
+        outputPreview: sanitizedOutput.substring(0, 200) 
+      });
+      if (chartData) {
+        console.log('Chart data:', chartData);
+      }
+    }
+
     return {
       output: sanitizedOutput,
+      chartData,
     };
   } catch (error) {
     // Tratar erros de timeout

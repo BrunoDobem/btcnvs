@@ -34,6 +34,14 @@ export function ChatContainer() {
     setChatState((prev) => ({ ...prev, conversationId }));
   }, []);
 
+  const handleClearConversation = () => {
+    setChatState((prev) => ({
+      ...prev,
+      messages: [],
+      error: null,
+    }));
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!chatState.conversationId || chatState.isLoading) {
       return;
@@ -148,7 +156,19 @@ export function ChatContainer() {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-gray-200 px-6 py-4 bg-white rounded-t-lg">
-        <h1 className="text-xl font-semibold text-gray-800">Assistente de Dados</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-gray-800">Assistente de Dados</h1>
+          {chatState.messages.length > 0 && (
+            <button
+              onClick={handleClearConversation}
+              disabled={chatState.isLoading}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Limpar conversa"
+            >
+              Limpar conversa
+            </button>
+          )}
+        </div>
       </div>
       
       <MessageList 

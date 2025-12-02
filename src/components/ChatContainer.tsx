@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { ChatMessage, ChatState } from '../lib/types';
+import type { ChatMessage, ChatState, ChartType, ChartOptions, ChartSuggestion } from '../lib/types';
 import { getOrCreateConversationId } from '../lib/storage';
 import { sendMessageToWebhook } from '../lib/chatApi';
 import { rateLimiter, getRateLimitErrorMessage } from '../lib/rateLimiter';
 import { validateMessage } from '../lib/validation';
-import { extractChartDataFromText, cleanOutputFromCode } from '../lib/chartUtils';
+import { extractChartDataFromText, cleanOutputFromCode, isChartRequest, getAvailableChartTypes, canVisualizeAsChart } from '../lib/chartUtils';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 
@@ -41,6 +41,68 @@ export function ChatContainer() {
       messages: [],
       error: null,
     }));
+  };
+
+  const handleSelectChartType = (messageId: string, type: ChartType) => {
+    setChatState((prev) => {
+      const updatedMessages = prev.messages.map((msg) => {
+        if (msg.id === messageId && msg.chartOptions) {
+          // Criar chartData a partir das opções selecionadas
+          const chartData = {
+            type,
+            data: msg.chartOptions.data,
+            xKey: msg.chartOptions.xKey,
+            yKey: msg.chartOptions.yKey,
+            title: msg.chartOptions.title,
+            labels: msg.chartOptions.labels,
+          };
+          
+          // Manter chartOptions para permitir alteração posterior
+          return {
+            ...msg,
+            chartData,
+            // chartOptions permanece para permitir alteração
+          };
+        }
+        return msg;
+      });
+      
+      return {
+        ...prev,
+        messages: updatedMessages,
+      };
+    });
+  };
+
+  const handleVisualizeChart = (messageId: string) => {
+    setChatState((prev) => {
+      const updatedMessages = prev.messages.map((msg) => {
+        if (msg.id === messageId && msg.chartSuggestion) {
+          // Converter sugestão em chartOptions para o usuário escolher o tipo
+          const chartOptions: ChartOptions = {
+            data: msg.chartSuggestion.data,
+            xKey: msg.chartSuggestion.xKey,
+            yKey: msg.chartSuggestion.yKey,
+            availableTypes: msg.chartSuggestion.availableTypes,
+            title: msg.chartSuggestion.title,
+            labels: msg.chartSuggestion.labels,
+          };
+          
+          // Remover chartSuggestion e adicionar chartOptions
+          return {
+            ...msg,
+            chartSuggestion: undefined,
+            chartOptions,
+          };
+        }
+        return msg;
+      });
+      
+      return {
+        ...prev,
+        messages: updatedMessages,
+      };
+    });
   };
 
   const handleSendMessage = async (content: string) => {
@@ -115,12 +177,105 @@ export function ChatContainer() {
       // tentar extrair dados do texto automaticamente
       let chartData = response.chartData;
       let cleanedOutput = response.output;
+      let chartOptions: ChartOptions | undefined;
+      let chartSuggestion: ChartSuggestion | undefined;
       
-      if (!chartData) {
-        chartData = extractChartDataFromText(response.output, content) || undefined;
-        // Se um gráfico foi gerado automaticamente, limpar o código do output
-        if (chartData) {
-          cleanedOutput = cleanOutputFromCode(response.output);
+      // Tentar extrair dados do texto se não houver chartData
+      const extractedChartData = chartData || extractChartDataFromText(response.output, content) || undefined;
+      
+      if (extractedChartData) {
+        // Se o usuário pediu um gráfico, mostrar opções de estilo
+        if (isChartRequest(content)) {
+          const availableTypes = getAvailableChartTypes(
+            extractedChartData.data,
+            extractedChartData.xKey,
+            extractedChartData.yKey
+          );
+          
+          if (availableTypes.length > 0) {
+            chartOptions = {
+              data: extractedChartData.data,
+              xKey: extractedChartData.xKey,
+              yKey: extractedChartData.yKey,
+              availableTypes,
+              title: extractedChartData.title,
+              labels: extractedChartData.labels,
+            };
+            // Limpar o código do output quando há opções de gráfico
+            cleanedOutput = cleanOutputFromCode(response.output);
+          } else {
+            // Se não há tipos disponíveis, usar o gráfico extraído diretamente
+            chartData = extractedChartData;
+            cleanedOutput = cleanOutputFromCode(response.output);
+          }
+        } else {
+          // Se o usuário não pediu gráfico mas há dados visualizáveis, sugerir
+          if (canVisualizeAsChart(
+            extractedChartData.data,
+            extractedChartData.xKey,
+            extractedChartData.yKey
+          )) {
+            const availableTypes = getAvailableChartTypes(
+              extractedChartData.data,
+              extractedChartData.xKey,
+              extractedChartData.yKey
+            );
+            
+            chartSuggestion = {
+              data: extractedChartData.data,
+              xKey: extractedChartData.xKey,
+              yKey: extractedChartData.yKey,
+              availableTypes,
+              title: extractedChartData.title,
+              labels: extractedChartData.labels,
+            };
+          }
+        }
+      } else if (chartData) {
+        // Se há chartData direto da resposta e o usuário pediu gráfico, mostrar opções
+        if (isChartRequest(content)) {
+          const availableTypes = getAvailableChartTypes(
+            chartData.data,
+            chartData.xKey,
+            chartData.yKey
+          );
+          
+          if (availableTypes.length > 0) {
+            chartOptions = {
+              data: chartData.data,
+              xKey: chartData.xKey,
+              yKey: chartData.yKey,
+              availableTypes,
+              title: chartData.title,
+              labels: chartData.labels,
+            };
+            // Não mostrar o gráfico ainda, apenas as opções
+            chartData = undefined;
+          }
+        } else {
+          // Se o usuário não pediu gráfico mas há dados visualizáveis, sugerir
+          if (canVisualizeAsChart(
+            chartData.data,
+            chartData.xKey,
+            chartData.yKey
+          )) {
+            const availableTypes = getAvailableChartTypes(
+              chartData.data,
+              chartData.xKey,
+              chartData.yKey
+            );
+            
+            chartSuggestion = {
+              data: chartData.data,
+              xKey: chartData.xKey,
+              yKey: chartData.yKey,
+              availableTypes,
+              title: chartData.title,
+              labels: chartData.labels,
+            };
+            // Não mostrar o gráfico ainda, apenas a sugestão
+            chartData = undefined;
+          }
         }
       }
 
@@ -131,6 +286,8 @@ export function ChatContainer() {
         content: cleanedOutput,
         createdAt: new Date().toISOString(),
         chartData,
+        chartOptions,
+        chartSuggestion,
       };
 
       // Adicionar resposta do bot
@@ -188,7 +345,9 @@ export function ChatContainer() {
       
       <MessageList 
         messages={chatState.messages} 
-        isLoading={chatState.isLoading} 
+        isLoading={chatState.isLoading}
+        onSelectChartType={handleSelectChartType}
+        onVisualizeChart={handleVisualizeChart}
       />
       
       <MessageInput 

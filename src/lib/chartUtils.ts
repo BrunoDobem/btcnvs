@@ -455,3 +455,53 @@ function extractTitleFromText(text: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Determina quais tipos de gráfico são possíveis com os dados fornecidos
+ */
+export function getAvailableChartTypes(
+  data: Array<Record<string, string | number>>,
+  xKey: string,
+  yKey: string | string[]
+): ChartType[] {
+  const availableTypes: ChartType[] = [];
+  
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  const yKeys = Array.isArray(yKey) ? yKey : [yKey];
+  const firstItem = data[0];
+  
+  if (!firstItem || !(xKey in firstItem)) {
+    return [];
+  }
+
+  const hasValidYKey = yKeys.some((key: string) => key in firstItem);
+  if (!hasValidYKey) {
+    return [];
+  }
+
+  // Todos os tipos básicos são sempre possíveis se temos dados válidos
+  availableTypes.push('bar');
+  availableTypes.push('line');
+  availableTypes.push('area');
+
+  // Pizza só é adequada se temos poucos itens (até 8) e uma única série
+  if (data.length <= 8 && yKeys.length === 1) {
+    availableTypes.push('pie');
+  }
+
+  return availableTypes;
+}
+
+/**
+ * Verifica se os dados podem ser visualizados em um gráfico
+ */
+export function canVisualizeAsChart(
+  data: Array<Record<string, string | number>>,
+  xKey: string,
+  yKey: string | string[]
+): boolean {
+  return getAvailableChartTypes(data, xKey, yKey).length > 0;
+}
+

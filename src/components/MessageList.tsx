@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react';
-import type { ChatMessage } from '../lib/types';
+import type { ChatMessage, ChartType } from '../lib/types';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 
 interface MessageListProps {
   messages: ChatMessage[];
   isLoading: boolean;
+  onSelectChartType?: (messageId: string, type: ChartType) => void;
+  onVisualizeChart?: (messageId: string) => void;
 }
 
-export function MessageList({ messages, isLoading }: MessageListProps) {
+export function MessageList({ messages, isLoading, onSelectChartType, onVisualizeChart }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +25,12 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
         </div>
       )}
       {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
+        <MessageBubble
+          key={message.id}
+          message={message}
+          onSelectChartType={onSelectChartType}
+          onVisualizeChart={onVisualizeChart}
+        />
       ))}
       {isLoading && <TypingIndicator />}
       <div ref={messagesEndRef} />

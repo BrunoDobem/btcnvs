@@ -6,6 +6,8 @@ export interface ChatMessage {
   content: string;
   createdAt: string;    // ISO
   chartData?: ChartData; // Dados opcionais para gráfico
+  chartOptions?: ChartOptions; // Opções de gráfico quando o usuário solicita um gráfico
+  chartSuggestion?: ChartSuggestion; // Sugestão de gráfico quando há dados visualizáveis
 }
 
 export interface ChatState {
@@ -43,5 +45,25 @@ export interface ChartData {
   yKey: string | string[]; // Chave para o eixo Y (ou array de chaves para múltiplas séries)
   title?: string;
   labels?: Record<string, string>; // Mapeamento de chaves para labels legíveis
+}
+
+// Opções de gráfico quando o usuário solicita um gráfico
+export interface ChartOptions {
+  data: Array<Record<string, string | number>>;
+  xKey: string;
+  yKey: string | string[];
+  availableTypes: ChartType[]; // Tipos de gráfico possíveis com esses dados
+  title?: string;
+  labels?: Record<string, string>;
+}
+
+// Sugestão de gráfico quando há dados visualizáveis
+export interface ChartSuggestion {
+  data: Array<Record<string, string | number>>;
+  xKey: string;
+  yKey: string | string[];
+  availableTypes: ChartType[]; // Tipos de gráfico possíveis com esses dados
+  title?: string;
+  labels?: Record<string, string>;
 }
 

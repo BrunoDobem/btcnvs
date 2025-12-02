@@ -1,11 +1,15 @@
-import type { ChatMessage } from '../lib/types';
+import type { ChatMessage, ChartType } from '../lib/types';
 import { ChartRenderer } from './ChartRenderer';
+import { ChartStyleButtons } from './ChartStyleButtons';
+import { ChartSuggestion } from './ChartSuggestion';
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  onSelectChartType?: (messageId: string, type: ChartType) => void;
+  onVisualizeChart?: (messageId: string) => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onSelectChartType, onVisualizeChart }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   // Converter \n em quebras de linha reais
@@ -23,6 +27,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     console.log('Rendering chart in MessageBubble:', message.chartData);
   }
 
+  const handleSelectChartType = (type: ChartType) => {
+    if (onSelectChartType) {
+      onSelectChartType(message.id, type);
+    }
+  };
+
+  const handleVisualizeChart = () => {
+    if (onVisualizeChart) {
+      onVisualizeChart(message.id);
+    }
+  };
+
   return (
     <div
       className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
@@ -39,8 +55,20 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             {formatContent(message.content)}
           </p>
         )}
+        {message.chartSuggestion && (
+          <ChartSuggestion
+            onVisualize={handleVisualizeChart}
+          />
+        )}
         {message.chartData && (
           <ChartRenderer chartData={message.chartData} />
+        )}
+        {message.chartOptions && (
+          <ChartStyleButtons
+            chartOptions={message.chartOptions}
+            selectedType={message.chartData?.type}
+            onSelectChartType={handleSelectChartType}
+          />
         )}
       </div>
     </div>

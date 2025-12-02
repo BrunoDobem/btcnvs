@@ -5,6 +5,7 @@ export interface ChatMessage {
   role: Role;
   content: string;
   createdAt: string;    // ISO
+  chartData?: ChartData; // Dados opcionais para gráfico
 }
 
 export interface ChatState {
@@ -25,9 +26,22 @@ export interface WebhookRequest {
 
 export interface WebhookResponse {
   output: string;
+  chartData?: ChartData; // Dados opcionais para gráfico
 }
 
 export interface WebhookRawResponse {
   output: string;
+  chartData?: ChartData; // Dados opcionais para gráfico
+}
+
+export type ChartType = 'bar' | 'line' | 'pie' | 'area';
+
+export interface ChartData {
+  type: ChartType;
+  data: Array<Record<string, string | number>>;
+  xKey: string; // Chave para o eixo X
+  yKey: string | string[]; // Chave para o eixo Y (ou array de chaves para múltiplas séries)
+  title?: string;
+  labels?: Record<string, string>; // Mapeamento de chaves para labels legíveis
 }
 

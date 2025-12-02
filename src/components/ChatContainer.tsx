@@ -4,6 +4,7 @@ import { getOrCreateConversationId } from '../lib/storage';
 import { sendMessageToWebhook } from '../lib/chatApi';
 import { rateLimiter, getRateLimitErrorMessage } from '../lib/rateLimiter';
 import { validateMessage } from '../lib/validation';
+import { extractChartDataFromText, cleanOutputFromCode } from '../lib/chartUtils';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 
@@ -33,6 +34,14 @@ export function ChatContainer() {
     const conversationId = getOrCreateConversationId();
     setChatState((prev) => ({ ...prev, conversationId }));
   }, []);
+
+  const handleClearConversation = () => {
+    setChatState((prev) => ({
+      ...prev,
+      messages: [],
+      error: null,
+    }));
+  };
 
   const handleSendMessage = async (content: string) => {
     if (!chatState.conversationId || chatState.isLoading) {
@@ -102,12 +111,26 @@ export function ChatContainer() {
         history,
       });
 
+      // Se não há chartData na resposta mas o usuário pediu um gráfico,
+      // tentar extrair dados do texto automaticamente
+      let chartData = response.chartData;
+      let cleanedOutput = response.output;
+      
+      if (!chartData) {
+        chartData = extractChartDataFromText(response.output, content) || undefined;
+        // Se um gráfico foi gerado automaticamente, limpar o código do output
+        if (chartData) {
+          cleanedOutput = cleanOutputFromCode(response.output);
+        }
+      }
+
       // Criar mensagem do bot
       const botMessage: ChatMessage = {
         id: generateUUID(),
         role: 'bot',
-        content: response.output,
+        content: cleanedOutput,
         createdAt: new Date().toISOString(),
+        chartData,
       };
 
       // Adicionar resposta do bot
@@ -148,7 +171,19 @@ export function ChatContainer() {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-gray-200 px-6 py-4 bg-white rounded-t-lg">
-        <h1 className="text-xl font-semibold text-gray-800">Assistente de Dados</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-gray-800">Assistente de Dados</h1>
+          {chatState.messages.length > 0 && (
+            <button
+              onClick={handleClearConversation}
+              disabled={chatState.isLoading}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Limpar conversa"
+            >
+              Limpar conversa
+            </button>
+          )}
+        </div>
       </div>
       
       <MessageList 

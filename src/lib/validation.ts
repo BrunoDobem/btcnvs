@@ -79,15 +79,17 @@ export function isValidUrl(url: string): boolean {
 /**
  * Sanitiza uma string removendo caracteres potencialmente perigosos
  * (proteção básica contra XSS)
+ * Preserva quebras de linha (\n e \r) para formatação de texto
  */
 export function sanitizeString(input: string): string {
   if (typeof input !== 'string') {
     return '';
   }
 
-  // Remove caracteres de controle e normaliza
+  // Remove caracteres de controle, mas preserva \n (0x0A) e \r (0x0D) para quebras de linha
+  // Remove: \x00-\x09, \x0B-\x0C, \x0E-\x1F, \x7F
   return input
-    .replace(/[\x00-\x1F\x7F]/g, '') // Remove caracteres de controle
+    .replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F\x7F]/g, '') // Remove caracteres de controle (exceto \n e \r)
     .trim();
 }
 

@@ -106,9 +106,74 @@ src/
 
 ## 📝 Formato da Resposta do Webhook
 
+### Resposta Simples (Texto)
+
 ```json
+[
+  {
+    "output": "texto de resposta do bot"
+  }
+]
+```
+
+### Resposta com Gráfico
+
+O webhook pode retornar dados de gráfico de duas formas:
+
+#### Opção 1: Campo `chartData` separado
+
+```json
+[
+  {
+    "output": "Aqui está o gráfico dos investimentos por mês:",
+    "chartData": {
+      "type": "bar",
+      "data": [
+        { "mes": "Agosto 2025", "investimento": 647279.86 },
+        { "mes": "Setembro 2025", "investimento": 726691.83 },
+        { "mes": "Outubro 2025", "investimento": 426899.39 }
+      ],
+      "xKey": "mes",
+      "yKey": "investimento",
+      "title": "Investimento por Mês",
+      "labels": {
+        "mes": "Mês",
+        "investimento": "Investimento (R$)"
+      }
+    }
+  }
+]
+```
+
+#### Opção 2: JSON no output
+
+O sistema também detecta automaticamente dados de gráfico em JSON dentro do output:
+
+```json
+[
+  {
+    "output": "Aqui está o gráfico:\n```json\n{\"type\":\"bar\",\"data\":[{\"mes\":\"Agosto\",\"valor\":1000}],\"xKey\":\"mes\",\"yKey\":\"valor\"}\n```"
+  }
+]
+```
+
+### Tipos de Gráfico Suportados
+
+- `bar`: Gráfico de barras
+- `line`: Gráfico de linha
+- `pie`: Gráfico de pizza
+- `area`: Gráfico de área
+
+### Estrutura do ChartData
+
+```typescript
 {
-  "reply": "texto de resposta do bot"
+  type: 'bar' | 'line' | 'pie' | 'area';
+  data: Array<Record<string, string | number>>; // Array de objetos com os dados
+  xKey: string; // Chave do eixo X
+  yKey: string | string[]; // Chave(s) do eixo Y (array para múltiplas séries)
+  title?: string; // Título opcional do gráfico
+  labels?: Record<string, string>; // Mapeamento de chaves para labels legíveis
 }
 ```
 
